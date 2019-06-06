@@ -8,7 +8,7 @@ import face_recognition
 import argparse
 import imutils
 import pickle
-import time
+import time, os, shutil
 import cv2
 from imutils import paths
 import os
@@ -86,7 +86,11 @@ encode_faces()
 
 # load the known faces and embeddings
 print("[INFO] loading encodings...")
+<<<<<<< HEAD:trumpsSenfio/recognize_faces_video2.py
 data = pickle.loads(open("encodings.pickle", "rb").read())
+=======
+data = pickle.loads(open(args["encodings"], "rb").read())
+>>>>>>> 2f03f3aeade87b527ec35d7e0285c613661b3772:trumpsSenfio/recognize_faces_video.py
 
 # initialize the video stream and pointer to output video file, then
 # allow the camera sensor to warm up
@@ -95,8 +99,10 @@ vs = VideoStream(src=0).start()
 writer = None
 time.sleep(2.0)
 
-
+num_ids = 0
 num_imagem = 0
+if os.path.exists('encodings.pickle'):
+	os.remove('encodings.pickle')
 # loop over frames from the video file stream
 while True:
 	# grab the frame from the threaded video stream
@@ -116,6 +122,10 @@ while True:
 	encodings = face_recognition.face_encodings(rgb, boxes)
 	names = []
 
+	directory = 'dataset/'+ 'id' + str(num_ids)
+	if not os.path.exists(directory):
+		os.mkdir(directory)
+	num_unknows = 0
 	# loop over the facial embeddings
 	for j, encoding in enumerate(encodings):
 		# attempt to match each face in the input image to our known
@@ -123,7 +133,7 @@ while True:
 		matches = face_recognition.compare_faces(data["encodings"],
 			encoding)
 		name = "Unknown"
-
+	
 		# check to see if we have found a match
 		if True in matches:
 			# find the indexes of all matched faces then initialize a
@@ -144,15 +154,29 @@ while True:
 			name = max(counts, key=counts.get)
 		
 		if name == "Unknown":
+			num_unknows += 1
 			(top, right, bottom, left) = boxes[j]
 			unknown_face = rgb[top:bottom, left:right, :]
-			cv2.imwrite('dataset/pj/' + 'teste' + str(num_imagem) + '.jpg', unknown_face)
+			if num_imagem < 35:
+				cv2.imwrite(directory +  '/' + 'face' + str(num_imagem) + '.jpg', unknown_face)
 			num_imagem += 1
-		else:
-			num_imagem = 0
 
 		# update the list of names
 		names.append(name)
+	
+	if not num_unknows:
+		num_files = len([name for name in os.listdir(directory)])
+		if num_files > 0:
+			num_ids += 1
+			if num_files < 20:
+				shutil.rmtree(directory) 
+				num_ids -= 1
+			else:
+				os.system('python3 encode_faces.py --dataset ' + directory + ' --encodings encodings.pickle')
+				data = pickle.loads(open(args["encodings"], "rb").read())
+			
+		num_imagem = 0
+		
 
 	# loop over the recognized faces
 	for ((top, right, bottom, left), name) in zip(boxes, names):
