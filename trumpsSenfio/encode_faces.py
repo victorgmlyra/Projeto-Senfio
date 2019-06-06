@@ -54,9 +54,19 @@ for (i, imagePath) in enumerate(imagePaths):
 		knownEncodings.append(encoding)
 		knownNames.append(name)
 
-# dump the facial encodings + names to disk
-print("[INFO] serializing encodings...")
-data = {"encodings": knownEncodings, "names": knownNames}
-f = open(args["encodings"], "wb")
-f.write(pickle.dumps(data))
-f.close()
+
+if os.path.exists(args["encodings"]):
+	with open(args["encodings"],'rb') as rfp: 
+		faces = pickle.load(rfp)
+		faces['encodings'].extend(knownEncodings)
+		faces['names'].extend(knownNames)
+		with open(args["encodings"], "wb") as wfp:
+			pickle.dump(faces, wfp)
+
+else:
+	# dump the facial encodings + names to disk
+	print("[INFO] serializing encodings...")
+	data = {"encodings": knownEncodings, "names": knownNames}
+	with open(args["encodings"], "wb") as wfp:
+		pickle.dump(data, wfp)
+
