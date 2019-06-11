@@ -5,17 +5,14 @@
 # import the necessary packages
 from imutils.video import VideoStream
 import face_recognition
-import argparse
+import argparse, threading
 import imutils
 import pickle
 import time, os, shutil
 import cv2
 from imutils import paths
-import os
 
-def encode_faces(dataset, encodings = "encodings.pickle", detection_method = "cnn"):
-
-
+def encode_faces(dataset, encodings_file = "encodings.pickle", detection_method = "cnn"):
 	# grab the paths to the input images in our dataset
 	print("[INFO] quantifying faces...")
 	imagePaths = list(paths.list_images(dataset))
@@ -33,8 +30,7 @@ def encode_faces(dataset, encodings = "encodings.pickle", detection_method = "cn
 
 		# load the input image and convert it from RGB (OpenCV ordering)
 		# to dlib ordering (RGB)
-		imageOri = cv2.imread(imagePath)
-		image = cv2.resize(imageOri, (640,480))
+		image = cv2.imread(imagePath)
 		rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
 		# detect the (x, y)-coordinates of the bounding boxes
@@ -53,14 +49,20 @@ def encode_faces(dataset, encodings = "encodings.pickle", detection_method = "cn
 			knownNames.append(name)
 
 	# dump the facial encodings + names to disk
-	print("[INFO] serializing encodings...")
-	data = {"encodings": knownEncodings, "names": knownNames}
-	f = open(args["encodings"], "wb")
-	f.write(pickle.dumps(data))
-	f.close()
+	if os.path.exists(encodings_file):
+		with open(encodings_file,'rb') as rfp: 
+			faces = pickle.load(rfp)
+			faces['encodings'].extend(knownEncodings)
+			faces['names'].extend(knownNames)
+			with open(encodings_file, "wb") as wfp:
+				pickle.dump(faces, wfp)
+	else:
+		# dump the facial encodings + names to disk
+		print("[INFO] serializing encodings...")
+		data = {"encodings": knownEncodings, "names": knownNames}
+		with open(encodings_file, "wb") as wfp:
+			pickle.dump(data, wfp)
 
-
-encode_faces()
 
 #construct the argument parser and parse the arguments
 
@@ -76,11 +78,18 @@ ap.add_argument("-d", "--detection-method", type=str, default="cnn",
 args = vars(ap.parse_args())
 
 
-
+if os.path.exists('encodings.pickle'):
+	os.remove('encodings.pickle')
+encode_faces('dataset')
 
 # load the known faces and embeddings
 print("[INFO] loading encodings...")
 data = pickle.loads(open(args["encodings"], "rb").read())
+
+def teste(directory, encodings):
+	global data
+	encode_faces(directory)
+	data = pickle.loads(open(encodings, "rb").read())
 
 # initialize the video stream and pointer to output video file, then
 # allow the camera sensor to warm up
@@ -89,14 +98,19 @@ vs = VideoStream(src=0).start()
 writer = None
 time.sleep(2.0)
 
+st = time.time()
+fps = 0
 num_ids = 0
 num_imagem = 0
-if os.path.exists('encodings.pickle'):
-	os.remove('encodings.pickle')
 # loop over frames from the video file stream
 while True:
+	if time.time() - st >= 1:
+		print('fps: ', fps)
+		fps = 0
+		st = time.time()
 	# grab the frame from the threaded video stream
 	frame = vs.read()
+	fps += 1
 	
 	# convert the input frame from BGR to RGB then resize it to have
 	# a width of 750px (to speedup processing)
@@ -113,6 +127,7 @@ while True:
 	names = []
 
 	directory = 'dataset/'+ 'id' + str(num_ids)
+	th = threading.Thread(target = teste, args=(directory, args['encodings'])) 
 	if not os.path.exists(directory):
 		os.mkdir(directory)
 	num_unknows = 0
@@ -137,7 +152,7 @@ while True:
 			for i in matchedIdxs:
 				name = data["names"][i]
 				counts[name] = counts.get(name, 0) + 1
-			counts["Unknown"] = 20
+			counts["Unknown"] = 10
 			# determine the recognized face with the largest number
 			# of votes (note: in the event of an unlikely tie Python
 			# will select first entry in the dictionary)
@@ -146,9 +161,11 @@ while True:
 		if name == "Unknown":
 			num_unknows += 1
 			(top, right, bottom, left) = boxes[j]
-			unknown_face = rgb[top:bottom, left:right, :]
+			unknown_face = rgb[top - 30:bottom + 30, left - 30:right + 30, :]
 			if num_imagem < 35:
 				cv2.imwrite(directory +  '/' + 'face' + str(num_imagem) + '.jpg', unknown_face)
+			elif num_imagem == 35:
+				th.start()
 			num_imagem += 1
 
 		# update the list of names
@@ -161,9 +178,8 @@ while True:
 			if num_files < 20:
 				shutil.rmtree(directory) 
 				num_ids -= 1
-			else:
-				os.system('python3 encode_faces.py --dataset ' + directory + ' --encodings encodings.pickle')
-				data = pickle.loads(open(args["encodings"], "rb").read())
+			# else:
+			# 	th.start()
 			
 		num_imagem = 0
 		
