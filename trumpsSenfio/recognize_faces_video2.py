@@ -13,20 +13,12 @@ import cv2
 from imutils import paths
 import os
 
-def encode_faces():
-	# construct the argument parser and parse the arguments
-	ap = argparse.ArgumentParser()
-	ap.add_argument("-i", "--dataset", required=True,
-		help="path to input directory of faces + images")
-	ap.add_argument("-e", "--encodings", required=True,
-		help="path to serialized db of facial encodings")
-	ap.add_argument("-d", "--detection-method", type=str, default="cnn",
-		help="face detection model to use: either `hog` or `cnn`")
-	args = vars(ap.parse_args())
+def encode_faces(dataset, encodings = "encodings.pickle", detection_method = "cnn"):
+
 
 	# grab the paths to the input images in our dataset
 	print("[INFO] quantifying faces...")
-	imagePaths = list(paths.list_images(args["dataset"]))
+	imagePaths = list(paths.list_images(dataset))
 
 	# initialize the list of known encodings and known names
 	knownEncodings = []
@@ -48,7 +40,7 @@ def encode_faces():
 		# detect the (x, y)-coordinates of the bounding boxes
 		# corresponding to each face in the input image
 		boxes = face_recognition.face_locations(rgb,
-			model=args["detection_method"])
+			model=detection_method)
 
 		# compute the facial embedding for the face
 		encodings = face_recognition.face_encodings(rgb, boxes)
@@ -69,28 +61,26 @@ def encode_faces():
 
 
 encode_faces()
-# construct the argument parser and parse the arguments
-#ap = argparse.ArgumentParser()
-#ap.add_argument("-e", "--encodings", required=True,
-#	help="path to serialized db of facial encodings")
-#ap.add_argument("-o", "--output", type=str,
-#	help="path to output video")
-#ap.add_argument("-y", "--display", type=int, default=1,
-#	help="whether or not to display output frame to screen")
-#ap.add_argument("-d", "--detection-method", type=str, default="cnn",
-#	help="face detection model to use: either `hog` or `cnn`")
-#args = vars(ap.parse_args())
+
+#construct the argument parser and parse the arguments
+
+ap = argparse.ArgumentParser()
+ap.add_argument("-e", "--encodings", required=True,
+	help="path to serialized db of facial encodings")
+ap.add_argument("-o", "--output", type=str,
+	help="path to output video")
+ap.add_argument("-y", "--display", type=int, default=1,
+	help="whether or not to display output frame to screen")
+ap.add_argument("-d", "--detection-method", type=str, default="cnn",
+	help="face detection model to use: either `hog` or `cnn`")
+args = vars(ap.parse_args())
 
 
 
 
 # load the known faces and embeddings
 print("[INFO] loading encodings...")
-<<<<<<< HEAD:trumpsSenfio/recognize_faces_video2.py
-data = pickle.loads(open("encodings.pickle", "rb").read())
-=======
 data = pickle.loads(open(args["encodings"], "rb").read())
->>>>>>> 2f03f3aeade87b527ec35d7e0285c613661b3772:trumpsSenfio/recognize_faces_video.py
 
 # initialize the video stream and pointer to output video file, then
 # allow the camera sensor to warm up
