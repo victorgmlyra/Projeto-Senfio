@@ -1,6 +1,5 @@
 # USAGE
 # python recognize_faces_video.py --encodings encodings.pickle
-# python recognize_faces_video.py --encodings encodings.pickle --output output/jurassic_park_trailer_output.avi --display 0
 
 # import the necessary packages
 from imutils.video import VideoStream
@@ -69,10 +68,6 @@ def encode_faces(dataset, encodings_file = "encodings.pickle", detection_method 
 ap = argparse.ArgumentParser()
 ap.add_argument("-e", "--encodings", required=True,
 	help="path to serialized db of facial encodings")
-ap.add_argument("-o", "--output", type=str,
-	help="path to output video")
-ap.add_argument("-y", "--display", type=int, default=1,
-	help="whether or not to display output frame to screen")
 ap.add_argument("-d", "--detection-method", type=str, default="cnn",
 	help="face detection model to use: either `hog` or `cnn`")
 args = vars(ap.parse_args())
@@ -86,7 +81,7 @@ encode_faces('dataset')
 print("[INFO] loading encodings...")
 data = pickle.loads(open(args["encodings"], "rb").read())
 
-def teste(directory, encodings):
+def save_id(directory, encodings):
 	global data
 	encode_faces(directory)
 	data = pickle.loads(open(encodings, "rb").read())
@@ -95,13 +90,13 @@ def teste(directory, encodings):
 # allow the camera sensor to warm up
 print("[INFO] starting video stream...")
 vs = VideoStream(src=0).start()
-writer = None
 time.sleep(2.0)
 
 st = time.time()
 fps = 0
 num_ids = 0
 num_imagem = 0
+count_names = {}
 # loop over frames from the video file stream
 while True:
 	if time.time() - st >= 1:
@@ -115,9 +110,9 @@ while True:
 	# convert the input frame from BGR to RGB then resize it to have
 	# a width of 750px (to speedup processing)
 	rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-	rgb = imutils.resize(frame, width=750)
+	rgb = imutils.resize(frame, width=420)
 	r = frame.shape[1] / float(rgb.shape[1])
-
+	h, w, _ = rgb.shape
 	# detect the (x, y)-coordinates of the bounding boxes
 	# corresponding to each face in the input frame, then compute
 	# the facial embeddings for each face
@@ -127,60 +122,79 @@ while True:
 	names = []
 
 	directory = 'dataset/'+ 'id' + str(num_ids)
-	th = threading.Thread(target = teste, args=(directory, args['encodings'])) 
+	th = threading.Thread(target = save_id, args=(directory, args['encodings'])) 
 	if not os.path.exists(directory):
 		os.mkdir(directory)
 	num_unknows = 0
 	# loop over the facial embeddings
 	for j, encoding in enumerate(encodings):
-		# attempt to match each face in the input image to our known
-		# encodings
+		# attempt to match each face in the input image to our known encodings
 		matches = face_recognition.compare_faces(data["encodings"],
 			encoding)
 		name = "Unknown"
 	
 		# check to see if we have found a match
 		if True in matches:
-			# find the indexes of all matched faces then initialize a
-			# dictionary to count the total number of times each face
-			# was matched
+			# find the indexes of all matched faces then initialize a dictionary 
+			# to count the total number of times each face was matched
 			matchedIdxs = [i for (i, b) in enumerate(matches) if b]
 			counts = {}
 
-			# loop over the matched indexes and maintain a count for
-			# each recognized face face
+			# loop over the matched indexes and maintain a count for each recognized face
 			for i in matchedIdxs:
 				name = data["names"][i]
 				counts[name] = counts.get(name, 0) + 1
-			counts["Unknown"] = 10
-			# determine the recognized face with the largest number
-			# of votes (note: in the event of an unlikely tie Python
-			# will select first entry in the dictionary)
+			counts["Unknown"] = 20
+
+			# determine the recognized face with the largest number of votes
 			name = max(counts, key=counts.get)
 		
 		if name == "Unknown":
 			num_unknows += 1
 			(top, right, bottom, left) = boxes[j]
-			unknown_face = rgb[top - 30:bottom + 30, left - 30:right + 30, :]
+			if top >= 30: top -= 30
+			if left >= 30: left -= 30
+			if bottom <= h - 30: bottom += 30
+			if right <= w - 30: right += 30
+			unknown_face = rgb[top:bottom, left:right, :]
 			if num_imagem < 35:
 				cv2.imwrite(directory +  '/' + 'face' + str(num_imagem) + '.jpg', unknown_face)
 			elif num_imagem == 35:
+				print(num_ids, ' chegou')
+				count_names['id' + str(num_ids)] = 26
 				th.start()
 			num_imagem += 1
 
 		# update the list of names
 		names.append(name)
+
+	# Save who got in
+	for n in names:
+		if n != 'Unknown':
+			if n not in count_names:
+				count_names[n] = 1
+			else:
+				count_names[n] += 1
+
+			if count_names[n] == 25:
+				print(n, ' chegou!')
 	
+	names_out = []
+	for n in count_names.keys():
+		if n not in names:
+			names_out.append(n)
+	for n in names_out:
+		del(count_names[n])
+
+	
+	# Find next id to be added and prevent false unknows
 	if not num_unknows:
 		num_files = len([name for name in os.listdir(directory)])
 		if num_files > 0:
 			num_ids += 1
-			if num_files < 20:
+			if num_files < 35:
 				shutil.rmtree(directory) 
-				num_ids -= 1
-			# else:
-			# 	th.start()
-			
+				num_ids -= 1			
 		num_imagem = 0
 		
 
@@ -199,21 +213,7 @@ while True:
 		cv2.putText(frame, name, (left, y), cv2.FONT_HERSHEY_SIMPLEX,
 			0.75, (0, 255, 0), 2)
 
-	# if the video writer is None *AND* we are supposed to write
-	# the output video to disk initialize the writer
-	#if writer is None and args["output"] is not None:
-	#	fourcc = cv2.VideoWriter_fourcc(*"MJPG")
-	#	writer = cv2.VideoWriter(args["output"], fourcc, 20,
-	#		(frame.shape[1], frame.shape[0]), True)
 
-	# if the writer is not None, write the frame with recognized
-	# faces t odisk
-	if writer is not None:
-		writer.write(frame)
-
-	# check to see if we are supposed to display the output frame to
-	# the screen
-	#if args["display"] > 0:
 	cv2.imshow("Frame", frame)
 	key = cv2.waitKey(1) & 0xFF
 
@@ -224,7 +224,3 @@ while True:
 # do a bit of cleanup
 cv2.destroyAllWindows()
 vs.stop()
-
-# check to see if the video writer point needs to be released
-if writer is not None:
-	writer.release()
