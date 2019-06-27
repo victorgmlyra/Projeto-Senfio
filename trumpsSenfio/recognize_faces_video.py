@@ -10,6 +10,8 @@ import pickle
 import time, os, shutil
 import cv2
 from imutils import paths
+import mysql.connector, datetime, bd
+
 
 def encode_faces(dataset, encodings_file = "encodings.pickle", detection_method = "cnn"):
 	# grab the paths to the input images in our dataset
@@ -62,6 +64,7 @@ def encode_faces(dataset, encodings_file = "encodings.pickle", detection_method 
 		with open(encodings_file, "wb") as wfp:
 			pickle.dump(data, wfp)
 
+mydb = bd.dbConnect() 
 
 #construct the argument parser and parse the arguments
 
@@ -110,7 +113,7 @@ while True:
 	# convert the input frame from BGR to RGB then resize it to have
 	# a width of 750px (to speedup processing)
 	rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-	rgb = imutils.resize(frame, width=420)
+	rgb = imutils.resize(frame, width=400)
 	r = frame.shape[1] / float(rgb.shape[1])
 	h, w, _ = rgb.shape
 	# detect the (x, y)-coordinates of the bounding boxes
@@ -162,6 +165,7 @@ while True:
 			elif num_imagem == 35:
 				print(num_ids, ' chegou')
 				count_names['id' + str(num_ids)] = 26
+				bd.insertFuncionario('id' + str(num_ids), mydb)
 				th.start()
 			num_imagem += 1
 

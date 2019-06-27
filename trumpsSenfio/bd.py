@@ -4,9 +4,9 @@ import time
 
 def dbConnect():
   mydb = mysql.connector.connect(
-  host="127.0.0.1",
+  host="0.0.0.0",
   user="root",
-  passwd="joma1234",
+  passwd="Jom@1234",
   database="SenfioDB" )
   return mydb
 
@@ -58,9 +58,8 @@ def countPeople(nomelocal, mydb):
 
 
 
-mydb = dbConnect() #Conectar no Banco de Dados
+#Conectar no Banco de Dados
 #insertFuncionario("pedro", mydb) #inserir funcionario
 #insertLocal("sala1", mydb) #inserir novo local
 #insertEvento(1, "entrou", 1, mydb) #inserir novo evento
 #buscarEventoFuncionario(1, mydb)
-countPeople("sala1", mydb)
