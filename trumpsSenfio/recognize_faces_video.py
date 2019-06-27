@@ -100,6 +100,7 @@ fps = 0
 num_ids = 0
 num_imagem = 0
 count_names = {}
+
 # loop over frames from the video file stream
 while True:
 	if time.time() - st >= 1:
@@ -111,11 +112,12 @@ while True:
 	fps += 1
 	
 	# convert the input frame from BGR to RGB then resize it to have
-	# a width of 750px (to speedup processing)
+	# a width of 400px (to speedup processing)
 	rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 	rgb = imutils.resize(frame, width=400)
 	r = frame.shape[1] / float(rgb.shape[1])
 	h, w, _ = rgb.shape
+
 	# detect the (x, y)-coordinates of the bounding boxes
 	# corresponding to each face in the input frame, then compute
 	# the facial embeddings for each face
@@ -165,7 +167,7 @@ while True:
 			elif num_imagem == 35:
 				print(num_ids, ' chegou')
 				count_names['id' + str(num_ids)] = 26
-				bd.insertFuncionario('id' + str(num_ids), mydb)
+				bd.insertFuncionario(num_ids, 'id' + str(num_ids), mydb)
 				th.start()
 			num_imagem += 1
 
@@ -181,6 +183,7 @@ while True:
 				count_names[n] += 1
 
 			if count_names[n] == 25:
+				bd.insertEvento(int(n[2:]), 'entrou', 1, mydb)
 				print(n, ' chegou!')
 	
 	names_out = []
