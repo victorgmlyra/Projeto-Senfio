@@ -12,6 +12,7 @@ import cv2
 from imutils import paths
 import mysql.connector, datetime, bd
 
+WIDTH = 400
 
 def encode_faces(dataset, encodings_file = "encodings.pickle", detection_method = "cnn"):
 	# grab the paths to the input images in our dataset
@@ -114,7 +115,7 @@ while True:
 	# convert the input frame from BGR to RGB then resize it to have
 	# a width of 400px (to speedup processing)
 	rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-	rgb = imutils.resize(frame, width=400)
+	rgb = imutils.resize(frame, width=WIDTH)
 	r = frame.shape[1] / float(rgb.shape[1])
 	h, w, _ = rgb.shape
 
@@ -165,8 +166,6 @@ while True:
 			if num_imagem < 35:
 				cv2.imwrite(directory +  '/' + 'face' + str(num_imagem) + '.jpg', unknown_face)
 			elif num_imagem == 35:
-				print(num_ids, ' chegou')
-				count_names['id' + str(num_ids)] = 26
 				bd.insertFuncionario(num_ids, 'id' + str(num_ids), mydb)
 				th.start()
 			num_imagem += 1
@@ -183,8 +182,13 @@ while True:
 				count_names[n] += 1
 
 			if count_names[n] == 25:
-				bd.insertEvento(int(n[2:]), 'entrou', 1, mydb)
-				print(n, ' chegou!')
+				(top, right, bottom, left) = boxes[names.index(n)]
+				if left < WIDTH/2:
+					bd.insertEvento(int(n[2:]), 'entrou', 1, mydb)
+					print(n, ' chegou!')
+				else:
+					bd.insertEvento(int(n[2:]), 'saiu', 1, mydb)
+					print(n, ' saiu!')
 	
 	names_out = []
 	for n in count_names.keys():

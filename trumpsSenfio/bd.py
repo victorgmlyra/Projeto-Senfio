@@ -29,9 +29,10 @@ def insertEvento(idFunc,evento, idLocal, mydb):
   mycursor = mydb.cursor()
 
   now = datetime.datetime.now()
-  dif_seconds = (now - getLastEvent(idFunc, mydb)[0]).seconds
+  ultimo = getLastEvent(idFunc, mydb)
+  dif_seconds = (now - ultimo[1]).seconds
   
-  if dif_seconds > 120:
+  if dif_seconds > 120 or evento != ultimo[0]:
     print('salvou!')
     date = now.strftime('%Y-%m-%d %H:%M:%S')
     val = idFunc, evento, idLocal, date
@@ -41,14 +42,14 @@ def insertEvento(idFunc,evento, idLocal, mydb):
 
 def getLastEvent(idFunc, mydb):
   mycursor = mydb.cursor()
-  sql = "SELECT eventos.dataHora FROM eventos INNER JOIN funcionario ON eventos.idFuncionario = funcionario.id INNER JOIN locais on eventos.idLocal = locais.id  WHERE idFuncionario = %s"
+  sql = "SELECT eventos.evento, eventos.dataHora FROM eventos INNER JOIN funcionario ON eventos.idFuncionario = funcionario.id INNER JOIN locais on eventos.idLocal = locais.id  WHERE idFuncionario = %s"
   val = [idFunc]
   mycursor.execute(sql, val)
   myresult = mycursor.fetchall()
   if myresult:
     return myresult[-1]
   else:
-    return (datetime.datetime(1970, 1, 1, 0, 0, 0),) # Returns Epoch time
+    return ('saiu', datetime.datetime(1970, 1, 1, 0, 0, 0)) # Returns Epoch time
 
 def buscarEventoFuncionario(idFunc, mydb):
   mycursor = mydb.cursor()
