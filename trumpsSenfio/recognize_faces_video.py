@@ -184,11 +184,11 @@ while True:
 			if count_names[n] == 25:
 				(top, right, bottom, left) = boxes[names.index(n)]
 				if left < WIDTH/2:
-					bd.insertEvento(int(n[2:]), 'entrou', 1, mydb)
 					print(n, ' chegou!')
+					bd.insertEvento(int(n[2:]), 'entrou', 1, mydb)
 				else:
-					bd.insertEvento(int(n[2:]), 'saiu', 1, mydb)
 					print(n, ' saiu!')
+					bd.insertEvento(int(n[2:]), 'saiu', 1, mydb)
 	
 	names_out = []
 	for n in count_names.keys():
