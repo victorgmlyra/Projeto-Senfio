@@ -7,7 +7,7 @@ import face_recognition
 import argparse, threading
 import imutils
 import pickle
-import time, os, shutil
+import time, os, shutil, glob
 import cv2
 from imutils import paths
 import mysql.connector, datetime, bd
@@ -79,6 +79,7 @@ args = vars(ap.parse_args())
 
 if os.path.exists('encodings.pickle'):
 	os.remove('encodings.pickle')
+
 encode_faces('dataset')
 
 # load the known faces and embeddings
@@ -98,7 +99,7 @@ time.sleep(2.0)
 
 st = time.time()
 fps = 0
-num_ids = 0
+num_ids = len(glob.glob('dataset/*'))
 num_imagem = 0
 count_names = {}
 
@@ -123,7 +124,7 @@ while True:
 	# corresponding to each face in the input frame, then compute
 	# the facial embeddings for each face
 	boxes = face_recognition.face_locations(rgb,
-		model="cnn")
+		model="hog")
 	encodings = face_recognition.face_encodings(rgb, boxes)
 	names = []
 
@@ -163,9 +164,9 @@ while True:
 			if bottom <= h - 30: bottom += 30
 			if right <= w - 30: right += 30
 			unknown_face = rgb[top:bottom, left:right, :]
-			if num_imagem < 35:
+			if num_imagem < 10:
 				cv2.imwrite(directory +  '/' + 'face' + str(num_imagem) + '.jpg', unknown_face)
-			elif num_imagem == 35:
+			elif num_imagem == 10:
 				bd.insertFuncionario(num_ids, 'id' + str(num_ids), mydb)
 				th.start()
 			num_imagem += 1
@@ -203,7 +204,7 @@ while True:
 		num_files = len([name for name in os.listdir(directory)])
 		if num_files > 0:
 			num_ids += 1
-			if num_files < 35:
+			if num_files < 10:
 				shutil.rmtree(directory) 
 				num_ids -= 1			
 		num_imagem = 0

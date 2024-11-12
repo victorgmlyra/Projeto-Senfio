@@ -33,9 +33,9 @@ def insertEvento(idFunc,evento, idLocal, mydb):
   dif_seconds = (now - ultimo[1]).seconds
   
   if dif_seconds > 120 or evento != ultimo[0]:
-    print('salvou!')
     date = now.strftime('%Y-%m-%d %H:%M:%S')
     val = idFunc, evento, idLocal, date
+    print("INSERT INTO eventos (idFuncionario, evento, idLocal, dataHora) VALUES (%s, %s, %s, %s)")
     sql = "INSERT INTO eventos (idFuncionario, evento, idLocal, dataHora) VALUES (%s, %s, %s, %s)"
     mycursor.execute(sql, val)
     mydb.commit()
