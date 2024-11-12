@@ -99,14 +99,22 @@ time.sleep(2.0)
 
 st = time.time()
 fps = 0
-num_ids = len(glob.glob('dataset/*'))
+num_ids = len(glob.glob('dataset/*'))+1
 num_imagem = 0
 count_names = {}
+
+# # Set funcionarios
+# for i, folder_name in enumerate(sorted(glob.glob('dataset/*'))):
+# 	print(i, folder_name.split('/')[-1])
+# 	bd.insertFuncionario(i+1, folder_name.split('/')[-1], mydb)
+
+# # Set local
+# bd.insertLocal(1, 'workplace', mydb)
 
 # loop over frames from the video file stream
 while True:
 	if time.time() - st >= 1:
-		print('fps: ', fps)
+		# print('fps: ', fps)
 		fps = 0
 		st = time.time()
 	# grab the frame from the threaded video stream
@@ -151,7 +159,7 @@ while True:
 			for i in matchedIdxs:
 				name = data["names"][i]
 				counts[name] = counts.get(name, 0) + 1
-			counts["Unknown"] = 20
+			counts["Unknown"] = 5
 
 			# determine the recognized face with the largest number of votes
 			name = max(counts, key=counts.get)
@@ -159,10 +167,10 @@ while True:
 		if name == "Unknown":
 			num_unknows += 1
 			(top, right, bottom, left) = boxes[j]
-			if top >= 30: top -= 30
-			if left >= 30: left -= 30
-			if bottom <= h - 30: bottom += 30
-			if right <= w - 30: right += 30
+			# if top >= 30: top -= 30
+			# if left >= 30: left -= 30
+			# if bottom <= h - 30: bottom += 30
+			# if right <= w - 30: right += 30
 			unknown_face = rgb[top:bottom, left:right, :]
 			if num_imagem < 10:
 				cv2.imwrite(directory +  '/' + 'face' + str(num_imagem) + '.jpg', unknown_face)
@@ -184,11 +192,11 @@ while True:
 
 			if count_names[n] == 25:
 				(top, right, bottom, left) = boxes[names.index(n)]
-				if left < WIDTH/2:
-					print(n, ' chegou!')
+				if (left + right) / 2 < WIDTH/2:
+					print(n, ' Arrived!')
 					bd.insertEvento(int(n[2:]), 'entrou', 1, mydb)
 				else:
-					print(n, ' saiu!')
+					print(n, ' Left!')
 					bd.insertEvento(int(n[2:]), 'saiu', 1, mydb)
 	
 	names_out = []
@@ -225,7 +233,7 @@ while True:
 		cv2.putText(frame, name, (left, y), cv2.FONT_HERSHEY_SIMPLEX,
 			0.75, (0, 255, 0), 2)
 
-
+	frame[:, int(frame.shape[1]/2)] = [0, 0, 0]
 	cv2.imshow("Frame", frame)
 	key = cv2.waitKey(1) & 0xFF
 
